@@ -3,18 +3,15 @@ Parses arbitrary predicate logic statements, and can pretty-print a truth table 
 
 Available operators:
 
-  AND             &&
-  
-  NAND            &
-  
-  OR              ||
-  
-  XOR             |
-  
-  NOT             !
-  
-  Implication     ->
-  
-  Bidirectional   <->
+| Name          |Operator |
+| -----         | ----    |
+| NOT           | `!`     |
+| AND           | `&&`    |
+| NAND          | `&`     |
+| OR            | `\|\|`  |
+| XOR           | `\|`    |
+| Implication   | `->`    |
+| Bidirectional | `<->`   |
+
   
 Some examples:
