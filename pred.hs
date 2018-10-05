@@ -3,7 +3,9 @@
 
 import Data.Set        (toList, fromList)
 import Data.Char       (isAlpha)
+import Data.List       (intercalate)
 import Numeric.Natural (Natural)
+import System.IO       (hFlush, stdout)
 
 
 {--
@@ -186,3 +188,91 @@ printTruthTable s = do
 -- | Convenience function for going from a String directly to a printed truth table
 table :: String -> IO ()
 table s = printTruthTable . parse $ tokenize s
+
+
+-- Proof checking functions:
+
+{-|
+
+Say we have a proof in the form of:
+
+  P_1
+  P_2
+  P_3
+  ...
+  P_N
+  Therefore, C
+
+Such a proof is only valid if, when all presuppositions are true, then
+the conclusion is also true.
+
+Leaning on the above functions, we can define just a few more that allow
+us to validate arbitrary proofs. The process is as follows:
+
+First, we wish to know when all presuppositions are true. We can thus combine
+them all with logical AND statements, such that we create some Statement of
+the form:
+
+  (P_1 && (P_2 && (P_3 && (... && P_N)))...)
+
+We then wish to ascertain whether, when this is true, the conclusion
+is also true. This is the definition of the Implies operator. Therefore
+we can append it as such:
+
+  (P_1 && (P_2 && (P_3 && (... && P_N)))...) -> C
+
+If this larger Statement is true for all possible inputs, then
+the proof is valid. Otherwise, it is invalid.
+
+--}
+
+proofCheck :: IO ()
+proofCheck = do
+  statements <- getStatements
+
+  let predicates = tail $ reverse statements
+  let conclusion = head $ reverse statements
+
+  let fullPredicate = foldl (\carry next -> joinStatements carry AND next) (head predicates) (tail predicates)
+  let fullProof = joinStatements fullPredicate Implies conclusion
+
+  let result = isAllTrue $ calculateAllValues fullProof
+
+  case result of
+    True -> do putStrLn "\nThe proof is valid."
+    False -> do putStrLn "\nThe proof is invalid."
+
+-- | Given two statements and a BinaryOperator, combines them into a new BinaryStatement.
+joinStatements :: Statement -> BinaryOperator -> Statement -> Statement
+joinStatements l o r = BinaryStatement l o r
+
+-- | Discards the inputs from `calculateAll`, but keeps the results.
+calculateAllValues :: Statement -> [Bool]
+calculateAllValues s = map (\(_, results) -> results) (calculateAll s)
+
+-- | Returns True if every value in the list is True. False otherwise.
+isAllTrue :: [Bool] -> Bool
+isAllTrue lst = foldl (\carry next -> carry && next) True lst
+
+-- | A small prompt for a string.
+ask :: IO String
+ask = do
+  putStr "> "
+  hFlush stdout
+
+  answer <- getLine
+  return answer
+
+-- | Continuously grabs and parses new Statements until one of them starts with "Therefore",
+-- | signifying a conclusion.
+getStatements :: IO [Statement]
+getStatements = do
+  predicateS <- ask
+
+  if ((head (words predicateS)) == "Therefore") then do
+    return [parse . tokenize . intercalate "" . tail $ words predicateS]
+  else do
+    let predicate = parse $ tokenize predicateS
+    rest <- getStatements
+    return $ predicate : rest
+
